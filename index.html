@@ -505,7 +505,7 @@
 
     .modal-actions {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 10px;
     }
 
@@ -719,6 +719,7 @@
       <textarea id="ratingCommentInput" class="rating-comment" maxlength="400" placeholder="Add a tiny review or comment..." aria-label="Rating comment"></textarea>
       <div class="modal-actions">
         <button id="clearRatingBtn" type="button">clear</button>
+        <button id="deleteRatingCommentBtn" type="button">delete comment</button>
         <button id="saveRatingBtn" class="save-rating-btn" type="button">save rating</button>
       </div>
       <button id="closeRatingBtn" class="text-btn" type="button" style="margin-top: 10px;">close</button>
@@ -801,6 +802,7 @@
     const ratingCommentInput = document.querySelector("#ratingCommentInput");
     const ratingStars = [...document.querySelectorAll(".star-btn")];
     const clearRatingBtn = document.querySelector("#clearRatingBtn");
+    const deleteRatingCommentBtn = document.querySelector("#deleteRatingCommentBtn");
     const saveRatingBtn = document.querySelector("#saveRatingBtn");
     const closeRatingBtn = document.querySelector("#closeRatingBtn");
 
@@ -1223,6 +1225,24 @@
       state.selectedRating = null;
       ratingCommentInput.value = "";
       updateRatingStars();
+    });
+
+    deleteRatingCommentBtn.addEventListener("click", async () => {
+      if (!state.ratingItemId || !initClients()) return;
+
+      const { error } = await supabaseClient
+        .from("watchlist")
+        .update({ rating_comment: null })
+        .eq("id", state.ratingItemId);
+
+      if (error) {
+        setStatus(appStatus, error.message);
+        return;
+      }
+
+      ratingCommentInput.value = "";
+      ratingCommentInput.focus();
+      await loadItems();
     });
 
     closeRatingBtn.addEventListener("click", closeRatingModal);
