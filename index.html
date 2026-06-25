@@ -223,6 +223,7 @@
     .add-panel,
     .stats-panel,
     .list-panel,
+    .viewer-panel,
     .setup-panel {
       padding: 20px;
     }
@@ -232,6 +233,51 @@
       margin-bottom: 12px;
       font-family: Georgia, "Times New Roman", serif;
       font-size: 1.55rem;
+    }
+
+    .viewer-panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .lock-card.viewer-panel {
+      display: grid;
+      justify-content: stretch;
+      margin-bottom: 0;
+      text-align: center;
+    }
+
+    .lock-card.viewer-panel .viewer-options {
+      justify-content: center;
+      margin-top: 18px;
+    }
+
+    .viewer-panel strong {
+      display: block;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.12rem;
+    }
+
+    .viewer-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .viewer-btn {
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: var(--paper-soft);
+      font-weight: 800;
+    }
+
+    .viewer-btn.is-active {
+      background: var(--ink);
+      color: var(--paper);
     }
 
     .add-form {
@@ -512,6 +558,11 @@
       font-size: 0.9rem;
     }
 
+    .comment-author {
+      font-weight: 800;
+      color: var(--ink);
+    }
+
     .comment-item span {
       display: block;
       margin-top: 4px;
@@ -686,8 +737,14 @@
       .add-panel,
       .stats-panel,
       .list-panel,
+      .viewer-panel,
       .setup-panel {
         padding: 16px;
+      }
+
+      .viewer-panel {
+        align-items: flex-start;
+        flex-direction: column;
       }
 
       .brand {
@@ -756,6 +813,19 @@
         <button class="primary-btn" type="submit">unlock</button>
       </form>
       <p id="loginStatus" class="status" role="status"></p>
+    </section>
+  </main>
+
+  <main id="viewerScreen" class="lock-screen hidden">
+    <section class="card lock-card viewer-panel" aria-label="Current commenter">
+      <div>
+        <h1>who's watching?</h1>
+        <p id="viewerStatus" class="subtitle">Pick who is using the list so comments show the right name.</p>
+      </div>
+      <div class="viewer-options">
+        <button class="viewer-btn" type="button" data-viewer="justin">justin</button>
+        <button class="viewer-btn" type="button" data-viewer="literylie">literylie</button>
+      </div>
     </section>
   </main>
 
@@ -862,6 +932,7 @@
          create table public.rating_comments (
            id uuid primary key default gen_random_uuid(),
            watchlist_id uuid not null references public.watchlist(id) on delete cascade,
+           commenter text not null default 'someone',
            comment text not null,
            created_at timestamptz not null default now()
          );
@@ -898,6 +969,7 @@
     const state = {
       items: [],
       comments: [],
+      viewerName: "",
       filter: "all",
       editingId: null,
       ratingItemId: null,
@@ -906,6 +978,7 @@
     };
 
     const lockScreen = document.querySelector("#lockScreen");
+    const viewerScreen = document.querySelector("#viewerScreen");
     const appScreen = document.querySelector("#app");
     const setupPanel = document.querySelector("#setupPanel");
     const passcodeForm = document.querySelector("#passcodeForm");
@@ -915,6 +988,8 @@
     const titleInput = document.querySelector("#titleInput");
     const typeInput = document.querySelector("#typeInput");
     const appStatus = document.querySelector("#appStatus");
+    const viewerStatus = document.querySelector("#viewerStatus");
+    const viewerButtons = [...document.querySelectorAll(".viewer-btn")];
     const watchlist = document.querySelector("#watchlist");
     const tabs = [...document.querySelectorAll(".tab")];
     const totalCount = document.querySelector("#totalCount");
@@ -959,15 +1034,25 @@
 
     function showApp() {
       lockScreen.style.display = "none";
+      viewerScreen.classList.add("hidden");
       appScreen.classList.add("is-open");
       setupPanel.classList.toggle("hidden", configReady);
       loadItems();
       subscribeToChanges();
     }
 
+    function showViewer() {
+      lockScreen.style.display = "none";
+      appScreen.classList.remove("is-open");
+      viewerScreen.classList.remove("hidden");
+      renderViewer();
+    }
+
     function showLock() {
       localStorage.removeItem("watchlistUnlocked");
+      state.viewerName = "";
       lockScreen.style.display = "grid";
+      viewerScreen.classList.add("hidden");
       appScreen.classList.remove("is-open");
       passcodeInputs.forEach((input) => {
         input.value = "";
@@ -1021,7 +1106,7 @@
 
       const { data, error } = await supabaseClient
         .from("rating_comments")
-        .select("id,watchlist_id,comment,created_at")
+        .select("id,watchlist_id,commenter,comment,created_at")
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -1087,6 +1172,25 @@
       return state.comments.filter((comment) => comment.watchlist_id === itemId);
     }
 
+    function setViewer(name) {
+      state.viewerName = name;
+      localStorage.setItem("watchlistViewer", name);
+      viewerStatus.textContent = `Entering as ${name}.`;
+      viewerButtons.forEach((button) => {
+        button.classList.toggle("is-active", button.dataset.viewer === name);
+      });
+    }
+
+    function renderViewer() {
+      if (state.viewerName) {
+        setViewer(state.viewerName);
+        return;
+      }
+
+      viewerStatus.textContent = "Pick who is using the list so comments show the right name.";
+      viewerButtons.forEach((button) => button.classList.remove("is-active"));
+    }
+
     function renderRatingComments() {
       if (!state.ratingItemId) return;
 
@@ -1101,7 +1205,7 @@
         return `
           <article class="comment-item">
             <div>
-              <p>${escapeHtml(comment.comment)}</p>
+              <p><span class="comment-author">${escapeHtml(comment.commenter || "someone")}:</span> ${escapeHtml(comment.comment)}</p>
               <span>${created ? `Added ${created}` : "Shared comment"}</span>
             </div>
             <button class="delete-comment-btn" type="button" data-comment-id="${comment.id}">delete</button>
@@ -1166,7 +1270,7 @@
         const isEditing = state.editingId === item.id;
         const comments = getItemComments(item.id);
         const commentCount = comments.length;
-        const latestComment = comments.at(-1)?.comment;
+        const latestComment = comments.at(-1);
         return `
           <article class="watch-item ${status === "watched" ? "is-done" : ""} ${status === "watching" ? "is-watching" : ""}" data-id="${item.id}">
             <label class="check" title="Mark watched">
@@ -1180,7 +1284,7 @@
               <div class="meta">${created ? `Added ${created}` : "Shared pick"} - ${getStatusLabel(status)}</div>
               <div class="meta">${getRatingLabel(item.rating)}</div>
               <div class="meta">${commentCount ? `${commentCount} comment${commentCount === 1 ? "" : "s"}` : "No comments yet"}</div>
-              ${latestComment ? `<div class="meta">"${escapeHtml(latestComment)}"</div>` : ""}
+              ${latestComment ? `<div class="meta">${escapeHtml(latestComment.commenter || "someone")}: "${escapeHtml(latestComment.comment)}"</div>` : ""}
             </div>
             <span class="badge">${item.type === "series" ? "Series" : "Movie"}</span>
             <select class="status-select" aria-label="Status for ${escapeHtml(item.title)}">
@@ -1250,7 +1354,7 @@
 
         localStorage.setItem("watchlistUnlocked", "true");
         setStatus(loginStatus, "");
-        showApp();
+        showViewer();
       } catch (error) {
         setStatus(loginStatus, error.message);
       }
@@ -1409,9 +1513,22 @@
       ratingCommentInput.focus();
     });
 
+    viewerButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        setViewer(button.dataset.viewer);
+        showApp();
+      });
+    });
+
     addRatingCommentBtn.addEventListener("click", async () => {
       if (!state.ratingItemId || !initClients()) return;
       const comment = ratingCommentInput.value.trim();
+
+      if (!state.viewerName) {
+        setStatus(appStatus, "Pick justin or literylie before commenting.");
+        ratingModal.classList.add("hidden");
+        return;
+      }
 
       if (!comment) {
         setStatus(appStatus, "Comment cannot be empty.");
@@ -1420,7 +1537,7 @@
 
       const { error } = await supabaseClient
         .from("rating_comments")
-        .insert({ watchlist_id: state.ratingItemId, comment });
+        .insert({ watchlist_id: state.ratingItemId, commenter: state.viewerName, comment });
 
       if (error) {
         setStatus(appStatus, error.message);
@@ -1492,7 +1609,7 @@
     lockBtn.addEventListener("click", showLock);
 
     if (localStorage.getItem("watchlistUnlocked") === "true") {
-      showApp();
+      showViewer();
     } else {
       passcodeInputs[0].focus();
       setupPanel.classList.toggle("hidden", configReady);
