@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Our Watchlist</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --ink: #2f271f;
+      --muted: #7d6f5d;
+      --paper: #ffe3eb;
+      --paper-soft: #fff1f5;
+      --stripe: #f2c4cf;
+      --straw: #6f8f53;
+      --tomato: #b86f83;
+      --shadow: rgba(50, 38, 24, 0.16);
+      --line: rgba(47, 39, 31, 0.18);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px 10px),
+        repeating-linear-gradient(90deg, var(--straw) 0 38px, var(--stripe) 38px 58px);
+      background-color: var(--straw);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(255, 245, 215, 0.55), transparent 34%),
+        linear-gradient(rgba(255, 249, 225, 0.28), rgba(255, 249, 225, 0.08));
+      mix-blend-mode: soft-light;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--ink);
+      background: var(--paper);
+      color: var(--ink);
+      cursor: pointer;
+      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 3px 3px 0 rgba(47, 39, 31, 0.18);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .top-strip {
+      height: 12px;
+      background: repeating-linear-gradient(90deg, var(--tomato) 0 14px, var(--paper) 14px 28px);
+      border-bottom: 1px solid rgba(47, 39, 31, 0.14);
+    }
+
+    .shell {
+      width: min(100%, 1040px);
+      margin: 0 auto;
+      padding: 0 18px 42px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 78px;
+      padding: 14px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--ink);
+      border-radius: 50%;
+      background: var(--paper);
+      box-shadow: 4px 4px 0 rgba(47, 39, 31, 0.12);
+      font-size: 22px;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.8rem, 4vw, 3.15rem);
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .brand .subtitle {
+      color: var(--ink);
+    }
+
+    .card {
+      border: 1px solid var(--ink);
+      border-radius: var(--radius);
+      background: rgba(255, 242, 204, 0.94);
+      box-shadow: 8px 8px 0 var(--shadow);
+    }
+
+    .lock-screen {
+      display: grid;
+      place-items: center;
+      min-height: calc(100vh - 12px);
+      padding: 22px;
+    }
+
+    .lock-card {
+      width: min(100%, 430px);
+      padding: 30px;
+      text-align: center;
+    }
+
+    .lock-card h1 {
+      margin-bottom: 12px;
+      font-size: clamp(2rem, 8vw, 3.4rem);
+    }
+
+    .passcode-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 26px 0 16px;
+    }
+
+    .passcode-row input {
+      width: 100%;
+      aspect-ratio: 1;
+      border: 1px solid var(--ink);
+      border-radius: var(--radius);
+      background: var(--paper-soft);
+      text-align: center;
+      font-size: 1.65rem;
+      color: var(--ink);
+      outline: none;
+    }
+
+    .passcode-row input:focus {
+      border-width: 2px;
+      box-shadow: 0 0 0 3px rgba(188, 70, 57, 0.16);
+    }
+
+    .primary-btn {
+      width: 100%;
+      min-height: 46px;
+      border-radius: var(--radius);
+      background: var(--ink);
+      color: var(--paper);
+      font-weight: 700;
+    }
+
+    .text-btn {
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: var(--radius);
+      background: var(--paper-soft);
+    }
+
+    .status {
+      min-height: 22px;
+      margin-top: 13px;
+      color: var(--tomato);
+      font-size: 0.92rem;
+    }
+
+    .app {
+      display: none;
+    }
+
+    .app.is-open {
+      display: block;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 315px;
+      gap: 22px;
+      align-items: stretch;
+      margin-bottom: 22px;
+    }
+
+    .add-panel,
+    .stats-panel,
+    .list-panel,
+    .setup-panel {
+      padding: 20px;
+    }
+
+    .add-panel h2,
+    .setup-panel h2 {
+      margin-bottom: 12px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.55rem;
+    }
+
+    .add-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 150px 110px;
+      gap: 10px;
+    }
+
+    .add-form input,
+    .add-form select {
+      min-height: 46px;
+      border: 1px solid var(--ink);
+      border-radius: var(--radius);
+      background: var(--paper-soft);
+      color: var(--ink);
+      padding: 0 12px;
+      outline: none;
+    }
+
+    .add-form input:focus,
+    .add-form select:focus {
+      box-shadow: 0 0 0 3px rgba(188, 70, 57, 0.14);
+    }
+
+    .add-form button {
+      min-height: 46px;
+      border-radius: var(--radius);
+      background: var(--tomato);
+      color: var(--paper-soft);
+      font-weight: 700;
+    }
+
+    .stats-panel {
+      display: grid;
+      gap: 10px;
+    }
+
+    .stat {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed rgba(47, 39, 31, 0.26);
+    }
+
+    .stat:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .stat strong {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.95rem;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: var(--paper-soft);
+    }
+
+    .tab.is-active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .watchlist {
+      display: grid;
+      gap: 10px;
+      min-height: 150px;
+    }
+
+    .watch-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto auto auto auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 248, 228, 0.82);
+    }
+
+    .watch-item.is-done .title {
+      color: var(--muted);
+      text-decoration: line-through;
+    }
+
+    .watch-item.is-watching {
+      border-color: rgba(188, 70, 57, 0.38);
+      background: rgba(255, 233, 205, 0.9);
+    }
+
+    .check {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--ink);
+      border-radius: 50%;
+      background: var(--paper);
+    }
+
+    .check input {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--tomato);
+      cursor: pointer;
+    }
+
+    .title {
+      overflow-wrap: anywhere;
+      font-weight: 700;
+    }
+
+    .edit-title-input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--ink);
+      border-radius: var(--radius);
+      background: var(--paper-soft);
+      color: var(--ink);
+      padding: 0 10px;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .edit-title-input:focus {
+      box-shadow: 0 0 0 3px rgba(184, 111, 131, 0.16);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-top: 3px;
+    }
+
+    .badge {
+      min-width: 70px;
+      padding: 7px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f8d6df;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .status-select {
+      min-height: 34px;
+      max-width: 148px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--paper-soft);
+      color: var(--ink);
+      padding: 0 9px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .delete-btn {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--paper-soft);
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .edit-btn,
+    .save-btn,
+    .cancel-btn {
+      min-height: 38px;
+      padding: 0 11px;
+      border-radius: 999px;
+      background: var(--paper-soft);
+      font-size: 0.82rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .save-btn {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .empty {
+      display: grid;
+      place-items: center;
+      min-height: 150px;
+      border: 1px dashed rgba(47, 39, 31, 0.32);
+      border-radius: var(--radius);
+      color: var(--muted);
+      text-align: center;
+      padding: 20px;
+      background: rgba(255, 248, 228, 0.56);
+    }
+
+    .setup-panel {
+      margin-top: 22px;
+      background: rgba(255, 248, 228, 0.92);
+    }
+
+    .setup-panel ol {
+      margin: 12px 0 0;
+      padding-left: 22px;
+      color: var(--muted);
+    }
+
+    .setup-panel li {
+      margin: 9px 0;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: rgba(47, 39, 31, 0.1);
+      color: var(--ink);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 780px) {
+      header,
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      header {
+        align-items: flex-start;
+      }
+
+      .add-form {
+        grid-template-columns: 1fr;
+      }
+
+      .watch-item {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+      }
+
+      .badge {
+        grid-column: 2 / 3;
+        justify-self: start;
+      }
+
+      .status-select {
+        grid-column: 2 / 3;
+        justify-self: start;
+      }
+
+      .delete-btn {
+        grid-column: 3 / 4;
+        grid-row: 1 / 2;
+      }
+
+      .edit-btn,
+      .save-btn,
+      .cancel-btn {
+        grid-column: 2 / 3;
+        justify-self: start;
+      }
+    }
+
+    @media (max-width: 460px) {
+      .shell {
+        padding-inline: 12px;
+      }
+
+      .lock-card,
+      .add-panel,
+      .stats-panel,
+      .list-panel,
+      .setup-panel {
+        padding: 16px;
+      }
+
+      .brand {
+        align-items: flex-start;
+      }
+
+      .logo-mark {
+        width: 36px;
+        height: 36px;
+        font-size: 19px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-strip"></div>
+
+  <main id="lockScreen" class="lock-screen">
+    <section class="card lock-card" aria-labelledby="lockTitle">
+      <h1 id="lockTitle">our watchlist</h1>
+      <p class="subtitle">Enter the 4-digit passcode to open movie night.</p>
+      <form id="passcodeForm">
+        <div class="passcode-row" aria-label="4 digit passcode">
+          <input inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Digit 1" />
+          <input inputmode="numeric" maxlength="1" aria-label="Digit 2" />
+          <input inputmode="numeric" maxlength="1" aria-label="Digit 3" />
+          <input inputmode="numeric" maxlength="1" aria-label="Digit 4" />
+        </div>
+        <button class="primary-btn" type="submit">unlock</button>
+      </form>
+      <p id="loginStatus" class="status" role="status"></p>
+    </section>
+  </main>
+
+  <main id="app" class="app">
+    <div class="shell">
+      <header>
+        <div class="brand">
+          <div class="logo-mark" aria-hidden="true">&hearts;</div>
+          <div>
+            <h1>our watchlist</h1>
+            <p class="subtitle">Let's watch every movie and series we have ever mentioned hehe</p>
+          </div>
+        </div>
+        <button id="lockBtn" class="text-btn" type="button" title="Lock and return to passcode screen">lock</button>
+      </header>
+
+      <section class="hero" aria-label="Watchlist controls and stats">
+        <div class="card add-panel">
+          <h2>add something good</h2>
+          <form id="addForm" class="add-form">
+            <input id="titleInput" name="title" type="text" placeholder="Movie or series title" maxlength="120" required />
+            <select id="typeInput" name="type" aria-label="Type">
+              <option value="movie">Movie</option>
+              <option value="series">Series</option>
+            </select>
+            <button type="submit">add</button>
+          </form>
+          <p id="appStatus" class="status" role="status"></p>
+        </div>
+
+        <aside class="card stats-panel" aria-label="Watchlist stats">
+          <div class="stat"><span>Total</span><strong id="totalCount">0</strong></div>
+          <div class="stat"><span>To watch</span><strong id="todoCount">0</strong></div>
+          <div class="stat"><span>Watching</span><strong id="watchingCount">0</strong></div>
+          <div class="stat"><span>Watched</span><strong id="doneCount">0</strong></div>
+        </aside>
+      </section>
+
+      <section class="card list-panel" aria-labelledby="listTitle">
+        <div class="tabs" role="tablist" aria-label="Filter watchlist">
+          <button class="tab is-active" type="button" data-filter="all">All</button>
+          <button class="tab" type="button" data-filter="movie">Movies</button>
+          <button class="tab" type="button" data-filter="series">Series</button>
+          <button class="tab" type="button" data-filter="watching">Currently Watching</button>
+          <button class="tab" type="button" data-filter="watched">Watched</button>
+        </div>
+        <h2 id="listTitle" class="hidden">Watchlist items</h2>
+        <div id="watchlist" class="watchlist"></div>
+      </section>
+
+      <section id="setupPanel" class="card setup-panel hidden" aria-labelledby="setupTitle">
+        <h2 id="setupTitle">setup checklist</h2>
+        <p class="subtitle">This panel disappears after you paste your Supabase URL and anon key into the constants near the top of the script.</p>
+        <ol>
+          <li>Create a Supabase project and a <code>watchlist</code> table with <code>id</code>, <code>title</code>, <code>type</code>, <code>status</code>, <code>done</code>, and <code>created_at</code>.</li>
+          <li>Create a Supabase <code>settings</code> table and a <code>check_watchlist_passcode</code> function for the lock screen.</li>
+          <li>Paste your public Supabase URL and Supabase anon key into this file.</li>
+          <li>Deploy this folder to Vercel as a static site.</li>
+        </ol>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    /*
+      QUICK SETUP
+      1. Replace the placeholder values below.
+      2. In Supabase, create the tables with:
+         create table public.watchlist (
+           id uuid primary key default gen_random_uuid(),
+           title text not null,
+           type text not null check (type in ('movie', 'series')),
+           status text not null default 'to_watch' check (status in ('to_watch', 'watching', 'watched')),
+           done boolean not null default false,
+           created_at timestamptz not null default now()
+         );
+
+         create table public.settings (
+           key text primary key,
+           value text not null
+         );
+
+         insert into public.settings (key, value)
+         values ('passcode', '1234');
+
+         create or replace function public.check_watchlist_passcode(entered_code text)
+         returns boolean
+         language sql
+         security definer
+         set search_path = public
+         as $$
+           select exists (
+             select 1
+             from public.settings
+             where key = 'passcode'
+               and value = entered_code
+           );
+         $$;
+
+         alter publication supabase_realtime add table public.watchlist;
+    */
+    const SUPABASE_URL = "https://lhicfwmdixpjiicnsdag.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoaWNmd21kaXhwamlpY25zZGFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTI0MTIsImV4cCI6MjA5Nzk2ODQxMn0.KYtO-o70gD5lhxEnPq1UPT2KQi83CdApSoq1F1qpzNI";
+    const configReady = !SUPABASE_URL.includes("PASTE_")
+      && !SUPABASE_ANON_KEY.includes("PASTE_");
+
+    const state = {
+      items: [],
+      filter: "all",
+      editingId: null,
+      channel: null
+    };
+
+    const lockScreen = document.querySelector("#lockScreen");
+    const appScreen = document.querySelector("#app");
+    const setupPanel = document.querySelector("#setupPanel");
+    const passcodeForm = document.querySelector("#passcodeForm");
+    const passcodeInputs = [...document.querySelectorAll(".passcode-row input")];
+    const loginStatus = document.querySelector("#loginStatus");
+    const addForm = document.querySelector("#addForm");
+    const titleInput = document.querySelector("#titleInput");
+    const typeInput = document.querySelector("#typeInput");
+    const appStatus = document.querySelector("#appStatus");
+    const watchlist = document.querySelector("#watchlist");
+    const tabs = [...document.querySelectorAll(".tab")];
+    const totalCount = document.querySelector("#totalCount");
+    const todoCount = document.querySelector("#todoCount");
+    const watchingCount = document.querySelector("#watchingCount");
+    const doneCount = document.querySelector("#doneCount");
+    const lockBtn = document.querySelector("#lockBtn");
+
+    let supabaseClient = null;
+
+    function initClients() {
+      if (!configReady) {
+        setupPanel.classList.remove("hidden");
+        return false;
+      }
+
+      if (!supabaseClient) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+
+      return true;
+    }
+
+    function setStatus(target, message, isError = true) {
+      target.textContent = message;
+      target.style.color = isError ? "var(--tomato)" : "var(--muted)";
+    }
+
+    function getPasscode() {
+      return passcodeInputs.map((input) => input.value).join("");
+    }
+
+    function showApp() {
+      lockScreen.style.display = "none";
+      appScreen.classList.add("is-open");
+      setupPanel.classList.toggle("hidden", configReady);
+      loadItems();
+      subscribeToChanges();
+    }
+
+    function showLock() {
+      localStorage.removeItem("watchlistUnlocked");
+      lockScreen.style.display = "grid";
+      appScreen.classList.remove("is-open");
+      passcodeInputs.forEach((input) => {
+        input.value = "";
+      });
+      passcodeInputs[0].focus();
+      if (state.channel && supabaseClient) {
+        supabaseClient.removeChannel(state.channel);
+        state.channel = null;
+      }
+    }
+
+    async function checkPasscode(enteredCode) {
+      if (!initClients()) {
+        throw new Error("Add your Supabase URL and anon key in index.html first.");
+      }
+
+      const { data, error } = await supabaseClient
+        .rpc("check_watchlist_passcode", { entered_code: enteredCode });
+
+      if (error) {
+        throw new Error("Could not check the passcode in Supabase.");
+      }
+
+      return data === true;
+    }
+
+    async function loadItems() {
+      if (!initClients()) {
+        render();
+        return;
+      }
+
+      const { data, error } = await supabaseClient
+        .from("watchlist")
+        .select("id,title,type,status,done,created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        setStatus(appStatus, error.message);
+        return;
+      }
+
+      state.items = data || [];
+      setStatus(appStatus, "Synced.", false);
+      render();
+    }
+
+    function subscribeToChanges() {
+      if (!supabaseClient || state.channel) return;
+
+      state.channel = supabaseClient
+        .channel("watchlist-realtime")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "watchlist" },
+          () => loadItems()
+        )
+        .subscribe();
+    }
+
+    function filteredItems() {
+      if (state.filter === "watched") {
+        return state.items.filter((item) => getItemStatus(item) === "watched");
+      }
+
+      if (state.filter === "watching") {
+        return state.items.filter((item) => getItemStatus(item) === "watching");
+      }
+
+      if (state.filter === "movie" || state.filter === "series") {
+        return state.items.filter((item) => item.type === state.filter);
+      }
+
+      return state.items;
+    }
+
+    function getItemStatus(item) {
+      if (item.status) return item.status;
+      return item.done ? "watched" : "to_watch";
+    }
+
+    function getStatusLabel(status) {
+      if (status === "watching") return "Currently watching";
+      if (status === "watched") return "Watched";
+      return "To watch";
+    }
+
+    function render() {
+      const total = state.items.length;
+      const watched = state.items.filter((item) => getItemStatus(item) === "watched").length;
+      const watching = state.items.filter((item) => getItemStatus(item) === "watching").length;
+      totalCount.textContent = total;
+      doneCount.textContent = watched;
+      watchingCount.textContent = watching;
+      todoCount.textContent = state.items.filter((item) => getItemStatus(item) === "to_watch").length;
+
+      tabs.forEach((tab) => {
+        tab.classList.toggle("is-active", tab.dataset.filter === state.filter);
+      });
+
+      const visibleItems = filteredItems();
+
+      if (!visibleItems.length) {
+        watchlist.innerHTML = `<div class="empty">No titles here yet. Add the first pick for the next couch date.</div>`;
+        return;
+      }
+
+      watchlist.innerHTML = visibleItems.map((item) => {
+        const created = item.created_at ? new Date(item.created_at).toLocaleDateString() : "";
+        const status = getItemStatus(item);
+        const isEditing = state.editingId === item.id;
+        return `
+          <article class="watch-item ${status === "watched" ? "is-done" : ""} ${status === "watching" ? "is-watching" : ""}" data-id="${item.id}">
+            <label class="check" title="Mark watched">
+              <input type="checkbox" ${status === "watched" ? "checked" : ""} aria-label="Mark ${escapeHtml(item.title)} as watched" />
+            </label>
+            <div>
+              ${isEditing
+                ? `<input class="edit-title-input" type="text" value="${escapeHtml(item.title)}" maxlength="120" aria-label="Edit title" />`
+                : `<div class="title">${escapeHtml(item.title)}</div>`
+              }
+              <div class="meta">${created ? `Added ${created}` : "Shared pick"} - ${getStatusLabel(status)}</div>
+            </div>
+            <span class="badge">${item.type === "series" ? "Series" : "Movie"}</span>
+            <select class="status-select" aria-label="Status for ${escapeHtml(item.title)}">
+              <option value="to_watch" ${status === "to_watch" ? "selected" : ""}>To watch</option>
+              <option value="watching" ${status === "watching" ? "selected" : ""}>Watching</option>
+              <option value="watched" ${status === "watched" ? "selected" : ""}>Watched</option>
+            </select>
+            ${isEditing
+              ? `<button class="save-btn" type="button" data-action="save-title">save</button>
+                 <button class="cancel-btn" type="button" data-action="cancel-edit">cancel</button>`
+              : `<button class="edit-btn" type="button" data-action="edit-title" title="Edit ${escapeHtml(item.title)}" aria-label="Edit ${escapeHtml(item.title)}">edit</button>`
+            }
+            <button class="delete-btn" type="button" title="Delete ${escapeHtml(item.title)}" aria-label="Delete ${escapeHtml(item.title)}">x</button>
+          </article>
+        `;
+      }).join("");
+
+      const editInput = watchlist.querySelector(".edit-title-input");
+      if (editInput) {
+        editInput.focus();
+        editInput.setSelectionRange(editInput.value.length, editInput.value.length);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    passcodeInputs.forEach((input, index) => {
+      input.addEventListener("input", () => {
+        input.value = input.value.replace(/\D/g, "").slice(0, 1);
+        if (input.value && index < passcodeInputs.length - 1) {
+          passcodeInputs[index + 1].focus();
+        }
+      });
+
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Backspace" && !input.value && index > 0) {
+          passcodeInputs[index - 1].focus();
+        }
+      });
+    });
+
+    passcodeForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const code = getPasscode();
+
+      if (code.length !== 4) {
+        setStatus(loginStatus, "Enter all 4 digits.");
+        return;
+      }
+
+      setStatus(loginStatus, "Checking passcode...", false);
+
+      try {
+        const pass = await checkPasscode(code);
+        if (!pass) {
+          setStatus(loginStatus, "That passcode does not match.");
+          return;
+        }
+
+        localStorage.setItem("watchlistUnlocked", "true");
+        setStatus(loginStatus, "");
+        showApp();
+      } catch (error) {
+        setStatus(loginStatus, error.message);
+      }
+    });
+
+    addForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const title = titleInput.value.trim();
+      const type = typeInput.value;
+
+      if (!title || !initClients()) return;
+
+      const { error } = await supabaseClient
+        .from("watchlist")
+        .insert({ title, type, status: "to_watch", done: false });
+
+      if (error) {
+        setStatus(appStatus, error.message);
+        return;
+      }
+
+      addForm.reset();
+      typeInput.value = type;
+      titleInput.focus();
+      await loadItems();
+    });
+
+    watchlist.addEventListener("change", async (event) => {
+      if (!event.target.matches('input[type="checkbox"]') || !initClients()) return;
+      const itemEl = event.target.closest(".watch-item");
+      const id = itemEl.dataset.id;
+      const status = event.target.checked ? "watched" : "to_watch";
+      const { error } = await supabaseClient
+        .from("watchlist")
+        .update({ status, done: status === "watched" })
+        .eq("id", id);
+
+      if (error) {
+        setStatus(appStatus, error.message);
+        event.target.checked = !event.target.checked;
+        return;
+      }
+
+      await loadItems();
+    });
+
+    watchlist.addEventListener("change", async (event) => {
+      if (!event.target.matches(".status-select") || !initClients()) return;
+      const itemEl = event.target.closest(".watch-item");
+      const id = itemEl.dataset.id;
+      const status = event.target.value;
+      const { error } = await supabaseClient
+        .from("watchlist")
+        .update({ status, done: status === "watched" })
+        .eq("id", id);
+
+      if (error) {
+        setStatus(appStatus, error.message);
+        await loadItems();
+        return;
+      }
+
+      await loadItems();
+    });
+
+    watchlist.addEventListener("click", async (event) => {
+      const action = event.target.dataset.action;
+      if (action === "edit-title") {
+        state.editingId = event.target.closest(".watch-item").dataset.id;
+        render();
+        return;
+      }
+
+      if (action === "cancel-edit") {
+        state.editingId = null;
+        render();
+        return;
+      }
+
+      if (action === "save-title") {
+        if (!initClients()) return;
+        const itemEl = event.target.closest(".watch-item");
+        const id = itemEl.dataset.id;
+        const title = itemEl.querySelector(".edit-title-input").value.trim();
+
+        if (!title) {
+          setStatus(appStatus, "Title cannot be empty.");
+          return;
+        }
+
+        const { error } = await supabaseClient
+          .from("watchlist")
+          .update({ title })
+          .eq("id", id);
+
+        if (error) {
+          setStatus(appStatus, error.message);
+          return;
+        }
+
+        state.editingId = null;
+        await loadItems();
+        return;
+      }
+
+      if (!event.target.matches(".delete-btn") || !initClients()) return;
+      const itemEl = event.target.closest(".watch-item");
+      const id = itemEl.dataset.id;
+      const { error } = await supabaseClient
+        .from("watchlist")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        setStatus(appStatus, error.message);
+        return;
+      }
+
+      await loadItems();
+    });
+
+    watchlist.addEventListener("keydown", async (event) => {
+      if (!event.target.matches(".edit-title-input")) return;
+
+      if (event.key === "Escape") {
+        state.editingId = null;
+        render();
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        event.target.closest(".watch-item").querySelector('[data-action="save-title"]').click();
+      }
+    });
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        state.filter = tab.dataset.filter;
+        render();
+      });
+    });
+
+    lockBtn.addEventListener("click", showLock);
+
+    if (localStorage.getItem("watchlistUnlocked") === "true") {
+      showApp();
+    } else {
+      passcodeInputs[0].focus();
+      setupPanel.classList.toggle("hidden", configReady);
+    }
+  </script>
+</body>
+</html>
