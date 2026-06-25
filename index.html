@@ -486,6 +486,48 @@
       box-shadow: 0 0 0 3px rgba(184, 111, 131, 0.16);
     }
 
+    .comment-list {
+      display: grid;
+      gap: 8px;
+      max-height: 190px;
+      margin: 0 0 14px;
+      overflow: auto;
+      text-align: left;
+    }
+
+    .comment-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: start;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 241, 245, 0.78);
+    }
+
+    .comment-item p {
+      color: var(--ink);
+      overflow-wrap: anywhere;
+      font-size: 0.9rem;
+    }
+
+    .comment-item span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.76rem;
+    }
+
+    .delete-comment-btn {
+      min-height: 30px;
+      padding: 0 9px;
+      border-radius: 999px;
+      background: var(--paper-soft);
+      font-size: 0.76rem;
+      font-weight: 800;
+    }
+
     .star-btn {
       display: grid;
       place-items: center;
@@ -503,21 +545,33 @@
       color: var(--paper);
     }
 
+    .comment-actions,
     .modal-actions {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
     }
 
+    .comment-actions {
+      margin-bottom: 10px;
+    }
+
+    .comment-actions button,
     .modal-actions button {
       min-height: 42px;
       border-radius: var(--radius);
       font-weight: 800;
     }
 
+    .comment-actions .add-comment-btn,
     .modal-actions .save-rating-btn {
       background: var(--ink);
       color: var(--paper);
+    }
+
+    .close-rating-btn {
+      width: 100%;
+      margin-top: 10px;
     }
 
     .empty {
@@ -573,30 +627,53 @@
       }
 
       .watch-item {
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
+        gap: 10px;
+        align-items: start;
+        padding: 16px;
       }
 
       .badge {
-        grid-column: 2 / 4;
+        grid-column: 2 / 3;
         justify-self: start;
       }
 
       .status-select {
-        grid-column: 2 / 4;
+        grid-column: 3 / 5;
         justify-self: start;
+        max-width: 100%;
       }
 
       .delete-btn {
-        grid-column: 3 / 4;
+        grid-column: 4 / 5;
         grid-row: 1 / 2;
+        width: 44px;
+        height: 44px;
+      }
+
+      .watch-item > div {
+        grid-column: 2 / 4;
       }
 
       .edit-btn,
       .save-btn,
       .cancel-btn,
       .rate-btn {
-        grid-column: 2 / 4;
+        grid-column: auto;
         justify-self: start;
+      }
+
+      .rate-btn {
+        grid-column: 2 / 3;
+      }
+
+      .edit-btn,
+      .save-btn {
+        grid-column: 3 / 4;
+      }
+
+      .cancel-btn {
+        grid-column: 4 / 5;
       }
     }
 
@@ -621,6 +698,43 @@
         width: 36px;
         height: 36px;
         font-size: 19px;
+      }
+
+      .watch-item {
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
+      }
+
+      .delete-btn {
+        grid-column: 4 / 5;
+      }
+
+      .badge {
+        grid-column: 2 / 3;
+      }
+
+      .status-select {
+        grid-column: 3 / 5;
+      }
+
+      .rate-btn {
+        grid-column: 2 / 3;
+      }
+
+      .edit-btn,
+      .save-btn {
+        grid-column: 3 / 4;
+      }
+
+      .cancel-btn {
+        grid-column: 4 / 5;
+      }
+
+      .status-select,
+      .rate-btn,
+      .edit-btn,
+      .save-btn,
+      .cancel-btn {
+        width: auto;
       }
     }
   </style>
@@ -696,7 +810,7 @@
         <h2 id="setupTitle">setup checklist</h2>
         <p class="subtitle">This panel disappears after you paste your Supabase URL and anon key into the constants near the top of the script.</p>
         <ol>
-          <li>Create a Supabase project and a <code>watchlist</code> table with <code>id</code>, <code>title</code>, <code>type</code>, <code>status</code>, <code>rating</code>, <code>rating_comment</code>, <code>done</code>, and <code>created_at</code>.</li>
+          <li>Create a Supabase project with <code>watchlist</code>, <code>rating_comments</code>, and <code>settings</code> tables.</li>
           <li>Create a Supabase <code>settings</code> table and a <code>check_watchlist_passcode</code> function for the lock screen.</li>
           <li>Paste your public Supabase URL and Supabase anon key into this file.</li>
           <li>Deploy this folder to Vercel as a static site.</li>
@@ -716,13 +830,17 @@
         <button class="star-btn" type="button" data-rating="4" aria-label="4 stars">&#9733;</button>
         <button class="star-btn" type="button" data-rating="5" aria-label="5 stars">&#9733;</button>
       </div>
-      <textarea id="ratingCommentInput" class="rating-comment" maxlength="400" placeholder="Add a tiny review or comment..." aria-label="Rating comment"></textarea>
+      <div id="ratingCommentList" class="comment-list" aria-live="polite"></div>
+      <textarea id="ratingCommentInput" class="rating-comment" maxlength="400" placeholder="Add another tiny review or comment..." aria-label="New rating comment"></textarea>
+      <div class="comment-actions">
+        <button id="clearCommentInputBtn" type="button">clear text</button>
+        <button id="addRatingCommentBtn" class="add-comment-btn" type="button">add comment</button>
+      </div>
       <div class="modal-actions">
-        <button id="clearRatingBtn" type="button">clear</button>
-        <button id="deleteRatingCommentBtn" type="button">delete comment</button>
+        <button id="clearRatingBtn" type="button">clear stars</button>
         <button id="saveRatingBtn" class="save-rating-btn" type="button">save rating</button>
       </div>
-      <button id="closeRatingBtn" class="text-btn" type="button" style="margin-top: 10px;">close</button>
+      <button id="closeRatingBtn" class="text-btn close-rating-btn" type="button">close</button>
     </div>
   </section>
 
@@ -737,8 +855,14 @@
            type text not null check (type in ('movie', 'series')),
            status text not null default 'to_watch' check (status in ('to_watch', 'watching', 'watched')),
            rating integer check (rating between 1 and 5),
-           rating_comment text,
            done boolean not null default false,
+           created_at timestamptz not null default now()
+         );
+
+         create table public.rating_comments (
+           id uuid primary key default gen_random_uuid(),
+           watchlist_id uuid not null references public.watchlist(id) on delete cascade,
+           comment text not null,
            created_at timestamptz not null default now()
          );
 
@@ -773,6 +897,7 @@
 
     const state = {
       items: [],
+      comments: [],
       filter: "all",
       editingId: null,
       ratingItemId: null,
@@ -799,10 +924,12 @@
     const lockBtn = document.querySelector("#lockBtn");
     const ratingModal = document.querySelector("#ratingModal");
     const ratingMovieTitle = document.querySelector("#ratingMovieTitle");
+    const ratingCommentList = document.querySelector("#ratingCommentList");
     const ratingCommentInput = document.querySelector("#ratingCommentInput");
     const ratingStars = [...document.querySelectorAll(".star-btn")];
     const clearRatingBtn = document.querySelector("#clearRatingBtn");
-    const deleteRatingCommentBtn = document.querySelector("#deleteRatingCommentBtn");
+    const clearCommentInputBtn = document.querySelector("#clearCommentInputBtn");
+    const addRatingCommentBtn = document.querySelector("#addRatingCommentBtn");
     const saveRatingBtn = document.querySelector("#saveRatingBtn");
     const closeRatingBtn = document.querySelector("#closeRatingBtn");
 
@@ -875,7 +1002,7 @@
 
       const { data, error } = await supabaseClient
         .from("watchlist")
-        .select("id,title,type,status,rating,rating_comment,done,created_at")
+        .select("id,title,type,status,rating,done,created_at")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -884,8 +1011,26 @@
       }
 
       state.items = data || [];
+      await loadComments();
       setStatus(appStatus, "Synced.", false);
       render();
+    }
+
+    async function loadComments() {
+      if (!supabaseClient) return;
+
+      const { data, error } = await supabaseClient
+        .from("rating_comments")
+        .select("id,watchlist_id,comment,created_at")
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        state.comments = [];
+        setStatus(appStatus, error.message);
+        return;
+      }
+
+      state.comments = data || [];
     }
 
     function subscribeToChanges() {
@@ -896,6 +1041,11 @@
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "watchlist" },
+          () => loadItems()
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "rating_comments" },
           () => loadItems()
         )
         .subscribe();
@@ -933,8 +1083,31 @@
       return `${rating}/5 stars`;
     }
 
-    function getRatingComment(item) {
-      return String(item.rating_comment || "").trim();
+    function getItemComments(itemId) {
+      return state.comments.filter((comment) => comment.watchlist_id === itemId);
+    }
+
+    function renderRatingComments() {
+      if (!state.ratingItemId) return;
+
+      const comments = getItemComments(state.ratingItemId);
+      if (!comments.length) {
+        ratingCommentList.innerHTML = `<div class="empty" style="min-height: 70px;">No comments yet.</div>`;
+        return;
+      }
+
+      ratingCommentList.innerHTML = comments.map((comment) => {
+        const created = comment.created_at ? new Date(comment.created_at).toLocaleDateString() : "";
+        return `
+          <article class="comment-item">
+            <div>
+              <p>${escapeHtml(comment.comment)}</p>
+              <span>${created ? `Added ${created}` : "Shared comment"}</span>
+            </div>
+            <button class="delete-comment-btn" type="button" data-comment-id="${comment.id}">delete</button>
+          </article>
+        `;
+      }).join("");
     }
 
     function updateRatingStars() {
@@ -951,9 +1124,10 @@
       state.ratingItemId = itemId;
       state.selectedRating = item.rating || null;
       ratingMovieTitle.textContent = item.title;
-      ratingCommentInput.value = getRatingComment(item);
+      ratingCommentInput.value = "";
       ratingModal.classList.remove("hidden");
       updateRatingStars();
+      renderRatingComments();
       ratingStars[Math.max(Number(state.selectedRating || 1) - 1, 0)].focus();
     }
 
@@ -961,6 +1135,7 @@
       state.ratingItemId = null;
       state.selectedRating = null;
       ratingCommentInput.value = "";
+      ratingCommentList.innerHTML = "";
       ratingModal.classList.add("hidden");
       updateRatingStars();
     }
@@ -989,7 +1164,9 @@
         const created = item.created_at ? new Date(item.created_at).toLocaleDateString() : "";
         const status = getItemStatus(item);
         const isEditing = state.editingId === item.id;
-        const ratingComment = getRatingComment(item);
+        const comments = getItemComments(item.id);
+        const commentCount = comments.length;
+        const latestComment = comments.at(-1)?.comment;
         return `
           <article class="watch-item ${status === "watched" ? "is-done" : ""} ${status === "watching" ? "is-watching" : ""}" data-id="${item.id}">
             <label class="check" title="Mark watched">
@@ -1002,7 +1179,8 @@
               }
               <div class="meta">${created ? `Added ${created}` : "Shared pick"} - ${getStatusLabel(status)}</div>
               <div class="meta">${getRatingLabel(item.rating)}</div>
-              ${ratingComment ? `<div class="meta">"${escapeHtml(ratingComment)}"</div>` : ""}
+              <div class="meta">${commentCount ? `${commentCount} comment${commentCount === 1 ? "" : "s"}` : "No comments yet"}</div>
+              ${latestComment ? `<div class="meta">"${escapeHtml(latestComment)}"</div>` : ""}
             </div>
             <span class="badge">${item.type === "series" ? "Series" : "Movie"}</span>
             <select class="status-select" aria-label="Status for ${escapeHtml(item.title)}">
@@ -1087,7 +1265,7 @@
 
       const { error } = await supabaseClient
         .from("watchlist")
-        .insert({ title, type, status: "to_watch", rating: null, rating_comment: null, done: false });
+        .insert({ title, type, status: "to_watch", rating: null, done: false });
 
       if (error) {
         setStatus(appStatus, error.message);
@@ -1223,17 +1401,26 @@
 
     clearRatingBtn.addEventListener("click", () => {
       state.selectedRating = null;
-      ratingCommentInput.value = "";
       updateRatingStars();
     });
 
-    deleteRatingCommentBtn.addEventListener("click", async () => {
+    clearCommentInputBtn.addEventListener("click", () => {
+      ratingCommentInput.value = "";
+      ratingCommentInput.focus();
+    });
+
+    addRatingCommentBtn.addEventListener("click", async () => {
       if (!state.ratingItemId || !initClients()) return;
+      const comment = ratingCommentInput.value.trim();
+
+      if (!comment) {
+        setStatus(appStatus, "Comment cannot be empty.");
+        return;
+      }
 
       const { error } = await supabaseClient
-        .from("watchlist")
-        .update({ rating_comment: null })
-        .eq("id", state.ratingItemId);
+        .from("rating_comments")
+        .insert({ watchlist_id: state.ratingItemId, comment });
 
       if (error) {
         setStatus(appStatus, error.message);
@@ -1241,8 +1428,27 @@
       }
 
       ratingCommentInput.value = "";
-      ratingCommentInput.focus();
-      await loadItems();
+      await loadComments();
+      renderRatingComments();
+      render();
+    });
+
+    ratingCommentList.addEventListener("click", async (event) => {
+      if (!event.target.matches(".delete-comment-btn") || !initClients()) return;
+      const commentId = event.target.dataset.commentId;
+      const { error } = await supabaseClient
+        .from("rating_comments")
+        .delete()
+        .eq("id", commentId);
+
+      if (error) {
+        setStatus(appStatus, error.message);
+        return;
+      }
+
+      await loadComments();
+      renderRatingComments();
+      render();
     });
 
     closeRatingBtn.addEventListener("click", closeRatingModal);
@@ -1264,10 +1470,7 @@
 
       const { error } = await supabaseClient
         .from("watchlist")
-        .update({
-          rating: state.selectedRating,
-          rating_comment: ratingCommentInput.value.trim() || null
-        })
+        .update({ rating: state.selectedRating })
         .eq("id", state.ratingItemId);
 
       if (error) {
